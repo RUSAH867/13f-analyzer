@@ -1,0 +1,69 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Fund {
+  id        Int       @id @default(autoincrement())
+  name      String
+  cik       String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  filings   Filing[]
+}
+
+model Filing {
+  id              Int       @id @default(autoincrement())
+  fundId          Int
+  accessionNumber String    @unique
+  reportDate      DateTime
+  filedDate       DateTime
+  createdAt       DateTime  @default(now())
+  fund            Fund      @relation(fields: [fundId], references: [id], onDelete: Cascade)
+  holdings        Holding[]
+
+  @@index([fundId])
+  @@index([reportDate])
+}
+
+model Security {
+  id         Int       @id @default(autoincrement())
+  cusip      String    @unique
+  issuerName String
+  ticker     String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  holdings   Holding[]
+
+  @@index([ticker])
+}
+
+model Holding {
+  id         Int      @id @default(autoincrement())
+  filingId   Int
+  securityId Int
+  value      BigInt   // Value in dollars (post-2023) or thousands (pre-2023)
+  shares     BigInt
+  createdAt  DateTime @default(now())
+  filing     Filing   @relation(fields: [filingId], references: [id], onDelete: Cascade)
+  security   Security @relation(fields: [securityId], references: [id], onDelete: Cascade)
+
+  @@unique([filingId, securityId])
+  @@index([filingId])
+  @@index([securityId])
+}
+
+model SyncLog {
+  id        Int      @id @default(autoincrement())
+  status    String   // 'started', 'completed', 'failed'
+  message   String?
+  fundsProcessed Int @default(0)
+  createdAt DateTime @default(now())
+}
